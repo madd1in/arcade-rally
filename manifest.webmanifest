@@ -1,0 +1,14 @@
+{
+  "name": "Arcade Rally",
+  "short_name": "Arcade Rally",
+  "description": "Sega-Rally-style arcade racer: drift through mud and gravel, charge your boost, beat your best lap.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b0d10",
+  "theme_color": "#ffc70d",
+  "icons": [
+    { "src": "img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

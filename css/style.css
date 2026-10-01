@@ -1,0 +1,146 @@
+:root {
+  --yellow: #ffc70d;
+  --cyan: #00d9ff;
+  --red: #ff3319;
+  --orange: #ff6600;
+  --white: #ffffff;
+  --u: calc(100dvh / 1080);          /* 1 design px of the 1920x1080 Figma frame */
+  --m: calc(40 * var(--u));
+  --shadow: calc(3 * var(--u)) calc(3 * var(--u)) 0 rgba(0, 0, 0, .8);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; width: 100%; height: 100%; overflow: hidden; background: #0b0d10;
+  font-family: "Chakra Petch", system-ui, sans-serif; color: var(--white);
+  user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: none;
+}
+canvas#game { position: fixed; inset: 0; width: 100vw; height: 100dvh; display: block; }
+.hidden { display: none !important; }
+.yellow { color: var(--yellow); } .cyan { color: var(--cyan); }
+
+/* ---------------- HUD ---------------- */
+#hud { position: fixed; inset: 0; pointer-events: none; text-shadow: var(--shadow); }
+#hud::before, #hud::after { content: ""; position: absolute; left: 0; right: 0; height: 28%; pointer-events: none; }
+#hud::before { top: 0; background: linear-gradient(rgba(0,0,0,.45), transparent); }
+#hud::after { bottom: 0; background: linear-gradient(transparent, rgba(0,0,0,.45)); }
+#hud > * { position: absolute; z-index: 1; }
+.tl { left: calc(var(--m) + var(--safe-l)); top: var(--m); }
+.big { font-family: "Russo One", sans-serif; font-size: calc(64 * var(--u)); line-height: 1.05; }
+.times { font-weight: 600; font-size: calc(36 * var(--u)); line-height: 1.25; margin-top: calc(6 * var(--u)); }
+.times .lbl { display: inline-block; min-width: calc(96 * var(--u)); }
+.tr { right: calc(var(--m) + var(--safe-r)); top: var(--m); display: flex; align-items: center; gap: calc(14 * var(--u)); }
+.cp-label { font-weight: 700; font-size: calc(32 * var(--u)); }
+.cp-count { font-family: "Russo One", sans-serif; font-size: calc(44 * var(--u)); }
+.round {
+  pointer-events: auto; width: calc(64 * var(--u)); height: calc(64 * var(--u)); border-radius: 50%;
+  background: rgba(0,0,0,.4); border: 2px solid var(--white); color: var(--white);
+  font: 700 calc(26 * var(--u)) "Chakra Petch", sans-serif; display: grid; place-items: center; padding: 0; cursor: pointer;
+}
+.callout {
+  left: 50%; top: 22%; transform: translate(-50%, -50%);
+  font-family: "Russo One", sans-serif; font-size: calc(84 * var(--u)); white-space: nowrap; opacity: 0;
+}
+.callout.show { animation: pop 2.2s ease-out forwards; }
+@keyframes pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1.45); }
+  10% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+.countdown {
+  left: 50%; top: 32%; transform: translate(-50%, -50%);
+  font-family: "Russo One", sans-serif; font-size: calc(340 * var(--u)); color: var(--red);
+  text-shadow: calc(6 * var(--u)) calc(6 * var(--u)) 0 rgba(0,0,0,.8);
+}
+.countdown.go { color: var(--yellow); font-size: calc(220 * var(--u)); }
+.bl { left: calc(var(--m) + var(--safe-l)); bottom: var(--m); }
+.boost-label { font-weight: 700; font-size: calc(30 * var(--u)); margin-bottom: calc(12 * var(--u)); }
+.boost-label.active { color: var(--orange); }
+.boost-bar { width: calc(386 * var(--u)); height: calc(32 * var(--u)); background: rgba(0,0,0,.55); border-radius: calc(4 * var(--u)); padding: calc(3 * var(--u)); }
+#hud-boost-fill { height: 100%; width: 35%; background: var(--cyan); border-radius: calc(2 * var(--u)); box-shadow: 0 0 calc(14 * var(--u)) rgba(0,217,255,.6); transition: width .08s linear; }
+#hud-boost-fill.active { background: var(--orange); box-shadow: 0 0 calc(18 * var(--u)) rgba(255,102,0,.8); }
+.drift {
+  position: absolute; left: calc(100% + 34 * var(--u)); bottom: 0; color: var(--yellow);
+  font-family: "Russo One", sans-serif; font-size: calc(54 * var(--u)); transform: rotate(-6deg); animation: pulse .25s infinite alternate;
+}
+@keyframes pulse { to { transform: rotate(-6deg) scale(1.12); } }
+.br { right: calc(var(--m) + var(--safe-r)); bottom: calc(30 * var(--u)); display: flex; align-items: baseline; gap: calc(14 * var(--u)); }
+#hud-speed { font-family: "Russo One", sans-serif; font-size: calc(180 * var(--u)); line-height: 1; }
+.br .unit { font-weight: 700; font-size: calc(40 * var(--u)); }
+.surface { left: 50%; bottom: calc(40 * var(--u)); transform: translateX(-50%); font-weight: 700; letter-spacing: .2em; font-size: calc(24 * var(--u)); opacity: .85; }
+
+/* ---------------- touch controls ---------------- */
+#touch { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+.tbtn {
+  pointer-events: auto; position: absolute; display: grid; place-items: center;
+  background: rgba(0,0,0,.35); border: 3px solid var(--white); color: var(--white);
+  font: 700 clamp(13px, 2.2vw, 20px) "Chakra Petch", sans-serif; letter-spacing: .04em;
+  touch-action: none; padding: 0; opacity: .92;
+}
+.tbtn.on { background: rgba(255,255,255,.28); transform: scale(.94); }
+.tbtn svg { width: 42%; height: 42%; fill: var(--white); }
+.steer { width: clamp(70px, 10.5vw, 104px); aspect-ratio: 1; border-radius: 50%; bottom: max(20px, 6dvh); }
+.steer[data-act="left"] { left: calc(max(20px, 4vw) + var(--safe-l)); }
+.steer[data-act="right"] { left: calc(max(20px, 4vw) + clamp(70px, 10.5vw, 104px) + 18px + var(--safe-l)); }
+.gas-btn { width: clamp(72px, 10vw, 100px); height: clamp(100px, 31dvh, 140px); border-radius: 18px; border-color: var(--yellow); color: var(--yellow);
+  right: calc(max(20px, 4vw) + var(--safe-r)); bottom: max(16px, 5dvh); }
+.brake-btn { width: clamp(64px, 9vw, 90px); height: clamp(70px, 22dvh, 100px); border-radius: 16px;
+  right: calc(max(20px, 4vw) + clamp(72px, 10vw, 100px) + 16px + var(--safe-r)); bottom: max(16px, 5dvh); }
+.drift-btn, .boost-btn { width: clamp(58px, 8vw, 80px); aspect-ratio: 1; border-radius: 50%; }
+.drift-btn { border-color: var(--cyan); color: var(--cyan);
+  right: calc(max(20px, 4vw) + clamp(72px, 10vw, 100px) + 20px + var(--safe-r)); bottom: calc(max(16px, 5dvh) + clamp(70px, 22dvh, 100px) + 14px); }
+.boost-btn { border-color: var(--orange); color: var(--orange);
+  right: calc(max(20px, 4vw) + 8px + var(--safe-r)); bottom: calc(max(16px, 5dvh) + clamp(100px, 31dvh, 140px) + 14px); }
+.boost-btn.ready { box-shadow: 0 0 18px rgba(255,102,0,.9); }
+
+/* compact HUD on phones (mirrors the "05 Mobile" Figma frame, 844x390) */
+body.touch { --u: calc(100dvh / 820); }
+body.touch .tl { top: 12px; }
+body.touch .tr { top: 12px; }
+body.touch .cp-label { display: none; }
+body.touch .bl { left: 50%; bottom: 10px; transform: translateX(-50%); text-align: center; }
+body.touch .boost-label { display: none; }
+body.touch .boost-bar { width: 26vw; height: 14px; border-radius: 7px; padding: 2px; }
+body.touch .drift { left: 50%; bottom: calc(100% + 54px); transform: translateX(-50%) rotate(-6deg); font-size: 30px; }
+body.touch .br { right: 50%; transform: translateX(50%); bottom: 30px; }
+body.touch #hud-speed { font-size: 52px; }
+body.touch .br .unit { font-size: 16px; }
+body.touch .surface { display: none; }
+body.touch .callout { font-size: 30px; top: 25%; }
+body.touch .key-hint { display: none; }
+
+/* ---------------- screens ---------------- */
+.screen {
+  position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: clamp(10px, 2.4dvh, 26px); padding: 20px; text-align: center;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,.35), rgba(0,0,0,.75));
+  text-shadow: 0 3px 0 rgba(0,0,0,.6);
+}
+#screen-loading { background: #0b0d10 url("../img/mud.png") center / cover; }
+#screen-loading::before { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+#screen-loading > * { position: relative; }
+.title { font-family: "Russo One", sans-serif; font-size: clamp(42px, 11vw, 170px); color: var(--yellow); letter-spacing: .03em; line-height: 1; }
+.title.small { font-size: clamp(36px, 7vw, 110px); }
+.sub { font-weight: 600; font-size: clamp(13px, 1.7vw, 28px); letter-spacing: .03em; }
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 24px; font-weight: 600; font-size: clamp(12px, 1.3vw, 22px); }
+kbd { font: 700 1em "Chakra Petch", sans-serif; background: #fff; color: #000; border-radius: 6px; padding: 2px 10px; margin-right: 8px; text-shadow: none; }
+.cta {
+  font: 400 clamp(20px, 2.6vw, 40px) "Russo One", sans-serif; color: #111; background: var(--yellow);
+  border: 0; border-radius: 12px; padding: .45em 1.6em; cursor: pointer; box-shadow: 0 6px 0 #b8860b, 0 10px 30px rgba(0,0,0,.4);
+  animation: breathe 1.4s ease-in-out infinite;
+}
+.cta.ghost { background: transparent; color: #fff; border: 3px solid #fff; box-shadow: none; animation: none; }
+@keyframes breathe { 50% { transform: scale(1.05); } }
+.hint { opacity: .7; font-size: clamp(11px, 1.1vw, 18px); }
+.loading { width: min(60vw, 520px); height: 14px; background: rgba(0,0,0,.6); border-radius: 7px; overflow: hidden; border: 2px solid rgba(255,255,255,.4); }
+#load-fill { height: 100%; width: 0; background: var(--yellow); transition: width .2s; }
+.panel { background: rgba(0,0,0,.6); border-radius: 10px; padding: clamp(14px, 2.6dvh, 28px) clamp(30px, 4vw, 60px); min-width: min(80vw, 640px); }
+.panel-title { font-family: "Russo One", sans-serif; color: var(--yellow); font-size: clamp(26px, 3vw, 56px); margin-bottom: 10px; }
+#results-laps div { font-weight: 600; font-size: clamp(16px, 2.1vw, 40px); line-height: 1.5; }
+#results-laps .best { color: var(--cyan); }
+.total { font-family: "Russo One", sans-serif; color: var(--yellow); font-size: clamp(20px, 2.4vw, 46px); margin-top: 8px; }
+.rot-icon { width: 90px; stroke: #fff; stroke-width: 3; fill: none; animation: rot 1.8s ease-in-out infinite; }
+@keyframes rot { 50% { transform: rotate(-90deg); } }
+body.touch .desktop-only, body:not(.touch) .touch-only { display: none !important; }

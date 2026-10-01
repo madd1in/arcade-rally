@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0d10">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="Arcade Rally - a Sega-Rally-style browser racer. Drift through mud and gravel, charge your boost, beat your best lap.">
+<title>Arcade Rally</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="img/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Russo+One&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- in-race HUD (layout follows the Figma mockup) -->
+<div id="hud" class="hidden">
+  <div class="tl">
+    <div id="hud-lap" class="big yellow">LAP 1/3</div>
+    <div class="times">
+      <div><span class="lbl">TIME</span> <span id="hud-time">0:00.00</span></div>
+      <div><span class="lbl">LAP</span> <span id="hud-laptime">0:00.00</span></div>
+      <div id="hud-best-row" class="cyan hidden"><span class="lbl">BEST</span> <span id="hud-best">-</span></div>
+    </div>
+  </div>
+  <div class="tr">
+    <span class="cp-label">CHECKPOINTS</span> <span id="hud-cp" class="yellow cp-count">0/5</span>
+    <button id="btn-fullscreen" class="round" aria-label="Toggle fullscreen">⛶</button>
+    <button id="btn-pause" class="round" aria-label="Pause">II</button>
+  </div>
+  <div id="hud-callout" class="callout"></div>
+  <div id="hud-countdown" class="countdown"></div>
+  <div class="bl">
+    <div id="hud-boost-label" class="cyan boost-label">BOOST <span class="key-hint">[SHIFT]</span></div>
+    <div class="boost-bar"><div id="hud-boost-fill"></div></div>
+    <div id="hud-drift" class="drift hidden">DRIFT!</div>
+  </div>
+  <div class="br"><span id="hud-speed">0</span><span class="unit yellow">KM/H</span></div>
+  <div id="hud-surface" class="surface"></div>
+</div>
+
+<!-- touch controls (shown on touch devices) -->
+<div id="touch" class="hidden">
+  <button class="tbtn steer" data-act="left" aria-label="Steer left"><svg viewBox="0 0 24 24"><path d="M16 4 L6 12 L16 20 Z"/></svg></button>
+  <button class="tbtn steer" data-act="right" aria-label="Steer right"><svg viewBox="0 0 24 24"><path d="M8 4 L18 12 L8 20 Z"/></svg></button>
+  <button class="tbtn drift-btn" data-act="drift">DRIFT</button>
+  <button class="tbtn boost-btn" data-act="boost">BOOST</button>
+  <button class="tbtn brake-btn" data-act="brake">BRAKE</button>
+  <button class="tbtn gas-btn" data-act="gas">GAS</button>
+</div>
+
+<!-- screens -->
+<div id="screen-loading" class="screen">
+  <div class="title">ARCADE RALLY</div>
+  <div class="loading"><div id="load-fill"></div></div>
+  <div id="load-text" class="sub">Loading track…</div>
+</div>
+<div id="screen-start" class="screen hidden">
+  <div class="title">ARCADE RALLY</div>
+  <div class="sub">3 LAPS · 5 CHECKPOINTS · DRIFT THROUGH THE MUD TO CHARGE BOOST</div>
+  <div class="chips desktop-only">
+    <span><kbd>W / S</kbd> drive &amp; brake</span><span><kbd>A / D</kbd> steer</span><span><kbd>SPACE</kbd> drift</span><span><kbd>SHIFT</kbd> boost</span><span><kbd>R</kbd> reset</span>
+  </div>
+  <div class="chips desktop-only">
+    <span><kbd>RT / LT</kbd> drive</span><span><kbd>STICK</kbd> steer</span><span><kbd>B</kbd> drift</span><span><kbd>A</kbd> boost</span><span><kbd>Y</kbd> reset</span>
+  </div>
+  <div class="chips touch-only">
+    <span><kbd>◀ ▶</kbd> steer</span><span><kbd>GAS</kbd> / <kbd>BRAKE</kbd></span><span><kbd>DRIFT</kbd> in corners</span><span><kbd>BOOST</kbd> when charged</span>
+  </div>
+  <div id="best-ever" class="sub cyan"></div>
+  <button id="btn-start" class="cta">START RACE</button>
+  <div class="hint desktop-only">or press ENTER · starts in fullscreen</div>
+  <div class="hint touch-only">starts in fullscreen</div>
+</div>
+<div id="screen-pause" class="screen hidden">
+  <div class="title small">PAUSED</div>
+  <button id="btn-resume" class="cta">RESUME</button>
+  <button id="btn-restart" class="cta ghost">RESTART</button>
+</div>
+<div id="screen-results" class="screen hidden">
+  <div class="title small yellow">FINISH!</div>
+  <div class="panel">
+    <div class="panel-title">RESULTS</div>
+    <div id="results-laps"></div>
+    <div id="results-total" class="total"></div>
+  </div>
+  <button id="btn-again" class="cta">RACE AGAIN</button>
+</div>
+<div id="rotate" class="screen hidden">
+  <svg viewBox="0 0 64 64" class="rot-icon"><rect x="18" y="6" width="28" height="52" rx="5"/><path d="M8 40 a24 24 0 0 0 24 18" fill="none"/><path d="M28 54 l4 4 l-4 4" fill="none"/></svg>
+  <div class="sub">Rotate your phone to landscape</div>
+</div>
+
+<script type="module" src="js/game.js"></script>
+</body>
+</html>
