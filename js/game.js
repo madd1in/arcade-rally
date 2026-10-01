@@ -12,8 +12,15 @@ const damp = (a, b, rate, dt) => lerp(a, b, 1 - Math.exp(-rate * dt));
 const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const fmt = (s) => { const m = Math.floor(s / 60); return `${m}:${(s - m * 60).toFixed(2).padStart(5, '0')}`; };
 
-const IS_TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+// touch layout for phones/tablets; hybrid laptops switch over on their first real touch
+let IS_TOUCH = matchMedia('(pointer: coarse)').matches;
 if (IS_TOUCH) document.body.classList.add('touch');
+addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'touch' || IS_TOUCH) return;
+  IS_TOUCH = true;
+  document.body.classList.add('touch');
+  if (['intro', 'countdown', 'race'].includes(race.state)) $('touch').classList.remove('hidden');
+}, { capture: true });
 
 // ------------------------------------------------------------------ tuning (SI units)
 const TUNE = {
@@ -31,7 +38,7 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: !IS_TOUCH, powerPr
 renderer.setPixelRatio(Math.min(devicePixelRatio, IS_TOUCH ? 1.5 : 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.82;
+renderer.toneMappingExposure = 0.9;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
